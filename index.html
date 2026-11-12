@@ -1,0 +1,1636 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Krillion — Deep-Sea Rarity Trivia</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@600;700;800&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        display: ['Space Grotesk', 'sans-serif'],
+                    },
+                    animation: {
+                        'float': 'float 4s ease-in-out infinite',
+                        'swim': 'swim 3s ease-in-out infinite',
+                        'pulse-glow': 'pulseGlow 2.5s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'shake': 'shake 0.45s cubic-bezier(.36,.07,.19,.97) both',
+                    },
+                    keyframes: {
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0px)' },
+                            '50%': { transform: 'translateY(-8px)' },
+                        },
+                        swim: {
+                            '0%, 100%': { transform: 'translateY(0px) rotate(-4deg)' },
+                            '50%': { transform: 'translateY(-6px) rotate(5deg)' },
+                        },
+                        pulseGlow: {
+                            '0%, 100%': { opacity: 1, filter: 'drop-shadow(0 0 12px rgba(56, 189, 248, 0.7))' },
+                            '50%': { opacity: 0.75, filter: 'drop-shadow(0 0 22px rgba(45, 212, 191, 0.95))' },
+                        },
+                        shake: {
+                            '10%, 90%': { transform: 'translate3d(-2px, 0, 0)' },
+                            '20%, 80%': { transform: 'translate3d(4px, 0, 0)' },
+                            '30%, 50%, 70%': { transform: 'translate3d(-6px, 0, 0)' },
+                            '40%, 60%': { transform: 'translate3d(6px, 0, 0)' }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* Custom Deep-Sea Gradient & Atmospheric Effects */
+        body {
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+            background-color: #020617;
+            color: #f8fafc;
+        }
+
+        #ocean-backdrop {
+            position: fixed;
+            inset: 0;
+            z-index: -2;
+            transition: background 1.4s cubic-bezier(0.22, 1, 0.36, 1);
+            /* Default Epipelagic / Setup ocean gradient */
+            background: linear-gradient(180deg, #0284c7 0%, #0369a1 28%, #0f172a 75%, #020617 100%);
+        }
+
+        /* Sunrays overlay that fades out as depth increases */
+        #sunrays {
+            position: fixed;
+            inset: 0;
+            z-index: -1;
+            pointer-events: none;
+            background: radial-gradient(ellipse at 50% -15%, rgba(186, 230, 253, 0.35) 0%, rgba(14, 165, 233, 0.1) 45%, transparent 75%);
+            transition: opacity 1.4s ease;
+        }
+
+        /* Ambient Rising Bubbles / Bioluminescent Spores */
+        .bubble {
+            position: fixed;
+            bottom: -40px;
+            border-radius: 9999px;
+            pointer-events: none;
+            z-index: -1;
+            animation: rise linear infinite;
+        }
+
+        @keyframes rise {
+            0% {
+                transform: translateY(0) translateX(0) scale(0.8);
+                opacity: 0;
+            }
+            15% {
+                opacity: var(--max-opacity, 0.45);
+            }
+            85% {
+                opacity: var(--max-opacity, 0.45);
+            }
+            100% {
+                transform: translateY(-110vh) translateX(var(--drift, 25px)) scale(1.15);
+                opacity: 0;
+            }
+        }
+
+        /* Custom Glassmorphism Cards */
+        .ocean-glass {
+            background: rgba(15, 23, 42, 0.68);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(148, 163, 184, 0.18);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.55);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.5);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(56, 189, 248, 0.35);
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(56, 189, 248, 0.6);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between selection:bg-cyan-400 selection:text-slate-950">
+
+    <!-- Dynamic Ocean Background & Lighting -->
+    <div id="ocean-backdrop"></div>
+    <div id="sunrays"></div>
+    <div id="particle-container" aria-hidden="true"></div>
+
+    <!-- Top Navigation / Status Header -->
+    <header class="w-full max-w-5xl mx-auto px-4 pt-4 pb-2 flex items-center justify-between z-10">
+        <div class="flex items-center gap-3">
+            <!-- Custom SVG Krill Emblem -->
+            <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-rose-500/20 to-amber-500/20 border border-rose-400/30 flex items-center justify-center shadow-lg shadow-rose-500/10">
+                <svg class="w-6 h-6 text-rose-400 animate-swim" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M50 22C44 17 34 17 25 22C17 26.5 12 34 10 42L5 46L11 47L10 53L16 48C22 44 27 38 33 35C40 31.5 47 31 53 33C56 30 55 25 50 22Z" fill="currentColor" fill-opacity="0.85"/>
+                    <path d="M53 26C57 22 60 16 61 11M54 29C58 27 61 24 62 20" stroke="#FDA4AF" stroke-width="2.2" stroke-linecap="round"/>
+                    <circle cx="48" cy="25" r="2.2" fill="#0F172A"/>
+                    <path d="M24 38L21 45M30 35L28 42M36 33L35 40" stroke="#FDA4AF" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+            </div>
+            <div>
+                <h1 class="font-display font-extrabold text-xl sm:text-2xl tracking-tight bg-gradient-to-r from-cyan-200 via-sky-300 to-rose-300 bg-clip-text text-transparent">
+                    KRILLION
+                </h1>
+                <p class="text-[11px] uppercase tracking-widest text-sky-300/75 font-semibold">Deep-Sea Rarity Trivia</p>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-2 sm:gap-3">
+            <span id="header-zone-badge" class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-sky-950/70 border border-sky-400/25 text-sky-200">
+                <span class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
+                <span id="header-zone-text">Sunlight Zone (0m)</span>
+            </span>
+            <button id="btn-api-settings" type="button" title="API Key Settings"
+                class="px-3 py-2 rounded-xl text-xs font-medium bg-slate-900/70 hover:bg-slate-800/90 border border-slate-700/70 text-slate-300 hover:text-white transition flex items-center gap-1.5 cursor-pointer">
+                <svg class="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
+                </svg>
+                <span class="hidden xs:inline">API Key</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Interactive Stage -->
+    <main class="w-full max-w-5xl mx-auto px-4 py-4 flex-1 flex flex-col justify-center z-10">
+
+        <!-- Custom Toast / Notification Banner -->
+        <div id="toast-banner" class="hidden mb-4 mx-auto max-w-xl w-full px-4 py-3 rounded-2xl border text-sm font-medium flex items-center justify-between gap-3 shadow-xl transition-all">
+            <span id="toast-message"></span>
+            <button type="button" onclick="hideToast()" class="text-current opacity-70 hover:opacity-100 font-bold px-1 cursor-pointer">&times;</button>
+        </div>
+
+        <!-- ========================================================= -->
+        <!-- SCREEN 1: SETUP & GEMINI API CONFIGURATION                  -->
+        <!-- ========================================================= -->
+        <section id="screen-setup" class="max-w-xl mx-auto w-full ocean-glass rounded-3xl p-6 sm:p-8 transition-all">
+            <div class="text-center mb-6">
+                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/15 border border-cyan-400/30 text-cyan-300 text-xs font-semibold mb-3">
+                    <span>🌊 7 Prompts</span>
+                    <span>•</span>
+                    <span>⏱️ 25s Each</span>
+                    <span>•</span>
+                    <span>🦑 Aim for 7,000m</span>
+                </div>
+                <h2 class="font-display text-2xl sm:text-3xl font-extrabold text-white mb-2">
+                    Think Obscure. Sink Deeper.
+                </h2>
+                <p class="text-slate-300 text-sm sm:text-base leading-relaxed">
+                    Obvious answers barely break the surface. Outsmart the crowd with valid yet ultra-rare answers to sink your krill down to the <span class="text-cyan-300 font-semibold">Hadal Trench</span>.
+                </p>
+            </div>
+
+            <!-- Rarity Tier Legend -->
+            <div class="grid grid-cols-3 gap-2 mb-6 text-center text-xs">
+                <div class="p-2.5 rounded-2xl bg-slate-900/60 border border-slate-700/50">
+                    <div class="text-slate-400 font-semibold">1–15 pts</div>
+                    <div class="text-slate-200 font-bold mt-0.5">🦠 Plankton</div>
+                    <div class="text-[10px] text-slate-400">Too obvious</div>
+                </div>
+                <div class="p-2.5 rounded-2xl bg-slate-900/60 border border-sky-500/30">
+                    <div class="text-sky-400 font-semibold">36–80 pts</div>
+                    <div class="text-sky-200 font-bold mt-0.5">🐙 Deep Diver</div>
+                    <div class="text-[10px] text-slate-400">Solid obscurity</div>
+                </div>
+                <div class="p-2.5 rounded-2xl bg-gradient-to-b from-fuchsia-950/60 to-cyan-950/60 border border-fuchsia-400/40">
+                    <div class="text-fuchsia-300 font-semibold">95–100 pts</div>
+                    <div class="text-white font-bold mt-0.5">🦐 1 in a Krillion</div>
+                    <div class="text-[10px] text-fuchsia-200/80">Legendary pull</div>
+                </div>
+            </div>
+
+            <!-- API Key & Dive Configuration Form -->
+            <form id="setup-form" class="space-y-4">
+                <div>
+                    <div class="flex items-center justify-between mb-1.5">
+                        <label for="api-key-input" class="block text-xs font-semibold uppercase tracking-wider text-slate-300">
+                            Google Gemini AI Studio API Key
+                        </label>
+                        <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer"
+                           class="text-xs text-cyan-400 hover:text-cyan-300 underline underline-offset-2">
+                            Get free key &rarr;
+                        </a>
+                    </div>
+                    <div class="relative flex items-center">
+                        <input id="api-key-input" type="password" required autocomplete="off"
+                            placeholder="AIzaSy..."
+                            class="w-full pl-4 pr-24 py-3 rounded-2xl bg-slate-950/80 border border-slate-700 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20 text-white placeholder-slate-500 text-sm outline-none transition" />
+                        <div class="absolute right-2 flex items-center gap-1">
+                            <button type="button" id="toggle-key-visibility"
+                                class="px-2 py-1 text-xs font-medium text-slate-400 hover:text-white rounded-lg bg-slate-800/80 cursor-pointer">
+                                Show
+                            </button>
+                            <button type="button" id="clear-key-btn" title="Clear saved key"
+                                class="hidden px-2 py-1 text-xs font-medium text-rose-400 hover:text-rose-300 rounded-lg bg-rose-950/60 cursor-pointer">
+                                Clear
+                            </button>
+                        </div>
+                    </div>
+                    <p id="saved-key-indicator" class="hidden mt-1.5 text-xs text-emerald-400 flex items-center gap-1">
+                        <span>✓</span> Key loaded from local browser storage (never sent anywhere except Google's API).
+                    </p>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label for="model-select" class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
+                            Gemini Model
+                        </label>
+                        <select id="model-select"
+                            class="w-full px-3.5 py-3 rounded-2xl bg-slate-950/80 border border-slate-700 focus:border-cyan-400 text-white text-sm outline-none transition cursor-pointer">
+                            <option value="gemini-3.8-flash" selected>gemini-3.8-flash (Default)</option>
+                            <option value="gemini-4-argon">gemini-4-argon</option>
+                            <option value="gemini-4-carbon">gemini-4-carbon</option>
+                            <option value="gemini-2.5-flash">gemini-2.5-flash (Legacy)</option>
+                            <option value="custom">Custom Model ID...</option>
+                        </select>
+                        <input id="custom-model-input" type="text" autocomplete="off" spellcheck="false"
+                            placeholder="e.g., gemini-3.8-flash-preview"
+                            class="hidden w-full mt-2 px-3.5 py-2.5 rounded-xl bg-slate-950/85 border border-cyan-500/50 focus:border-cyan-400 text-white placeholder-slate-500 text-xs font-mono outline-none transition" />
+                    </div>
+
+                    <div>
+                        <label for="prompt-mode-select" class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
+                            Prompt Deck
+                        </label>
+                        <select id="prompt-mode-select"
+                            class="w-full px-3.5 py-3 rounded-2xl bg-slate-950/80 border border-slate-700 focus:border-cyan-400 text-white text-sm outline-none transition cursor-pointer">
+                            <option value="ai-fresh" selected>✨ Fresh AI-Generated Dive</option>
+                            <option value="curated-mix">🎲 Curated + AI Hybrid</option>
+                            <option value="instant-deck">⚡ Instant Built-In Deck (AI Judges)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Live Submersible Connection / Error Panel -->
+                <div id="setup-status-box" class="hidden p-4 rounded-2xl border text-xs sm:text-sm space-y-3 transition-all">
+                    <div class="flex items-start gap-2.5">
+                        <span id="setup-status-icon" class="text-base shrink-0 mt-0.5">📡</span>
+                        <div class="flex-1 min-w-0">
+                            <div id="setup-status-title" class="font-bold">Connecting to Gemini...</div>
+                            <p id="setup-status-detail" class="text-xs opacity-90 mt-1 break-words leading-relaxed"></p>
+                        </div>
+                    </div>
+                    <div id="setup-error-actions" class="hidden flex flex-wrap gap-2 pt-1">
+                        <button id="btn-retry-dive" type="button"
+                            class="px-3.5 py-2 rounded-xl font-bold text-xs bg-rose-500/25 hover:bg-rose-500/35 border border-rose-400/50 text-rose-100 transition cursor-pointer">
+                            ↻ Retry AI Deck
+                        </button>
+                        <button id="btn-fallback-offline-deck" type="button"
+                            class="px-3.5 py-2 rounded-xl font-bold text-xs bg-cyan-500/25 hover:bg-cyan-500/35 border border-cyan-400/50 text-cyan-100 transition cursor-pointer">
+                            ⚡ Start with Instant Prompt Deck
+                        </button>
+                    </div>
+                </div>
+
+                <div class="flex flex-col sm:flex-row gap-2.5 pt-1">
+                    <button id="btn-test-connection" type="button"
+                        class="sm:w-auto px-4 py-3.5 rounded-2xl font-display font-bold text-xs sm:text-sm text-cyan-200 bg-slate-900/90 hover:bg-slate-800 border border-slate-700 hover:border-cyan-400/50 transition flex items-center justify-center gap-2 cursor-pointer">
+                        <span>Test Key</span>
+                    </button>
+                    <button id="btn-begin-descent" type="submit"
+                        class="flex-1 py-3.5 px-6 rounded-2xl font-display font-bold text-base sm:text-lg text-slate-950 bg-gradient-to-r from-cyan-300 via-sky-400 to-teal-300 hover:from-cyan-200 hover:to-teal-200 shadow-lg shadow-cyan-500/25 active:scale-[0.99] transition flex items-center justify-center gap-2 cursor-pointer">
+                        <span>Begin Descent</span>
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 14l-7 7m0 0l-7-7m7 7V3"/>
+                        </svg>
+                    </button>
+                </div>
+            </form>
+        </section>
+
+        <!-- ========================================================= -->
+        <!-- SCREEN 2: ACTIVE DIVE GAMEPLAY                            -->
+        <!-- ========================================================= -->
+        <section id="screen-game" class="hidden w-full">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+
+                <!-- Left / Top: Interactive Depth Gauge & Swimming Krill -->
+                <div class="lg:col-span-4 ocean-glass rounded-3xl p-4 sm:p-5 flex flex-col justify-between">
+                    <div class="flex items-center justify-between lg:block">
+                        <div>
+                            <div class="text-xs font-semibold uppercase tracking-wider text-cyan-300/80">Current Depth</div>
+                            <div class="flex items-baseline gap-1.5 mt-0.5">
+                                <span id="depth-counter" class="font-display text-3xl sm:text-4xl font-extrabold text-white">0</span>
+                                <span class="text-sm font-bold text-cyan-300">m</span>
+                                <span class="text-xs text-slate-400 ml-1">/ 7,000m</span>
+                            </div>
+                        </div>
+                        <div class="text-right lg:text-left lg:mt-2">
+                            <span id="zone-pill" class="inline-block px-2.5 py-1 rounded-xl text-xs font-bold bg-sky-500/20 border border-sky-400/30 text-sky-200">
+                                ☀️ Epipelagic Zone
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Vertical Bathymetric Shaft (Desktop) / Horizontal Progress (Mobile) -->
+                    <div class="my-4 lg:my-5 flex-1 flex flex-col justify-center">
+                        <!-- Desktop Vertical Trench -->
+                        <div class="hidden lg:flex relative h-72 w-full rounded-2xl bg-slate-950/75 border border-slate-800 p-3 overflow-hidden">
+                            <!-- Zone Depth Lines -->
+                            <div class="w-full h-full flex flex-col justify-between text-[10px] font-mono text-slate-400/80 select-none z-10">
+                                <div class="flex justify-between border-b border-slate-800/80 pb-1">
+                                    <span>0m • SUNLIGHT</span>
+                                    <span>SURFACE</span>
+                                </div>
+                                <div class="flex justify-between border-b border-slate-800/80 pb-1">
+                                    <span>1,000m • TWILIGHT</span>
+                                    <span>100 pts</span>
+                                </div>
+                                <div class="flex justify-between border-b border-slate-800/80 pb-1">
+                                    <span>3,000m • MIDNIGHT</span>
+                                    <span>300 pts</span>
+                                </div>
+                                <div class="flex justify-between border-b border-slate-800/80 pb-1">
+                                    <span>4,500m • ABYSSAL</span>
+                                    <span>450 pts</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span>7,000m • HADAL TRENCH</span>
+                                    <span>700 pts</span>
+                                </div>
+                            </div>
+
+                            <!-- Glowing Depth Track & Animated Krill Marker -->
+                            <div class="absolute right-6 top-3 bottom-3 w-2.5 rounded-full bg-slate-900 border border-slate-700/70">
+                                <div id="depth-fill-vertical" class="w-full rounded-full bg-gradient-to-b from-cyan-400 via-indigo-400 to-fuchsia-500 transition-all duration-1000" style="height: 2%;"></div>
+                                <!-- Swimming Krill Avatar -->
+                                <div id="krill-avatar-vertical" class="absolute -left-5 transition-all duration-1000 ease-out" style="top: 0%;">
+                                    <div class="w-12 h-12 rounded-full bg-rose-500/20 border border-rose-400/50 backdrop-blur-sm flex items-center justify-center shadow-lg shadow-rose-500/30 animate-swim">
+                                        <span class="text-2xl select-none" role="img" aria-label="Krill">🦐</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Mobile Compact Depth Bar -->
+                        <div class="lg:hidden relative w-full h-8 rounded-2xl bg-slate-950/80 border border-slate-800 p-1 flex items-center">
+                            <div id="depth-fill-horizontal" class="h-full rounded-xl bg-gradient-to-r from-cyan-400 via-indigo-400 to-fuchsia-500 transition-all duration-1000" style="width: 3%;"></div>
+                            <div id="krill-avatar-horizontal" class="absolute transition-all duration-1000 ease-out -translate-x-1/2" style="left: 4%;">
+                                <span class="text-xl drop-shadow">🦐</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Mini Dive Progress Dots -->
+                    <div>
+                        <div class="flex items-center justify-between text-xs text-slate-400 mb-2">
+                            <span>Dive Progress</span>
+                            <span id="score-total-label" class="font-bold text-white">0 pts</span>
+                        </div>
+                        <div id="prompt-dots" class="grid grid-cols-7 gap-1.5">
+                            <!-- 7 slots populated by JS -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right / Center: Prompt Card, Timer & Live AI Evaluation -->
+                <div class="lg:col-span-8 ocean-glass rounded-3xl p-5 sm:p-7 flex flex-col justify-between relative overflow-hidden">
+                    
+                    <!-- Top Bar: Round Counter, Category & Countdown Timer -->
+                    <div class="flex items-center justify-between gap-3 mb-5">
+                        <div class="flex items-center gap-2">
+                            <span id="round-badge" class="px-3 py-1 rounded-xl bg-cyan-500/20 border border-cyan-400/30 text-cyan-300 font-display font-bold text-xs sm:text-sm">
+                                PROMPT 1 / 7
+                            </span>
+                            <span id="category-badge" class="px-3 py-1 rounded-xl bg-slate-800/80 border border-slate-700 text-slate-300 font-semibold text-xs">
+                                Geography
+                            </span>
+                        </div>
+
+                        <!-- 25s Countdown Pill -->
+                        <div id="timer-container" class="flex items-center gap-2 px-3.5 py-1.5 rounded-2xl bg-slate-950/80 border border-slate-700">
+                            <svg class="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            <span id="timer-text" class="font-display font-extrabold text-lg tabular-nums text-white">25.0s</span>
+                        </div>
+                    </div>
+
+                    <!-- Timer Progress Bar -->
+                    <div class="w-full h-1.5 bg-slate-900 rounded-full overflow-hidden mb-6">
+                        <div id="timer-bar" class="h-full bg-gradient-to-r from-cyan-400 to-emerald-400 transition-all duration-100 ease-linear" style="width: 100%;"></div>
+                    </div>
+
+                    <!-- Prompt Question Display -->
+                    <div class="my-auto py-2">
+                        <h3 id="prompt-text" class="font-display text-2xl sm:text-3xl font-extrabold text-white leading-snug">
+                            Loading deep-sea prompt...
+                        </h3>
+                        <p id="prompt-hint" class="text-xs sm:text-sm text-slate-400 mt-2">
+                            Name a valid answer that almost nobody else would think of.
+                        </p>
+                    </div>
+
+                    <!-- Active Input Form (Shown while answering) -->
+                    <div id="answer-input-area" class="mt-6">
+                        <form id="answer-form" class="flex flex-col sm:flex-row gap-3">
+                            <input id="answer-input" type="text" autocomplete="off" spellcheck="false"
+                                placeholder="Type your rarest valid answer..."
+                                class="flex-1 px-4 py-3.5 rounded-2xl bg-slate-950/85 border border-slate-600 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/25 text-white placeholder-slate-500 text-base font-medium outline-none transition" />
+                            <button id="btn-submit-answer" type="submit"
+                                class="px-7 py-3.5 rounded-2xl font-display font-bold text-base text-slate-950 bg-gradient-to-r from-cyan-300 to-teal-300 hover:from-cyan-200 hover:to-teal-200 shadow-lg shadow-cyan-500/20 active:scale-[0.98] transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
+                                <span id="submit-btn-text">Dive</span>
+                                <span id="submit-spinner" class="hidden w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin"></span>
+                            </button>
+                        </form>
+
+                        <!-- Quick Inline Feedback for Invalid Attempts (Timer Keeps Ticking!) -->
+                        <div id="inline-feedback" class="hidden mt-3 px-4 py-2.5 rounded-xl bg-rose-950/70 border border-rose-500/40 text-rose-200 text-xs sm:text-sm flex items-center gap-2">
+                            <span class="text-base">🐡</span>
+                            <span id="inline-feedback-text">Not quite — keep swimming!</span>
+                        </div>
+                    </div>
+
+                    <!-- Post-Answer Evaluation Reveal Card (Shown after valid answer or timeout) -->
+                    <div id="result-reveal-area" class="hidden mt-6 p-5 rounded-2xl bg-slate-950/85 border border-cyan-400/35 space-y-4">
+                        <div class="flex flex-wrap items-center justify-between gap-3">
+                            <div>
+                                <div class="text-xs uppercase tracking-wider text-slate-400">Your Answer</div>
+                                <div id="reveal-answer-name" class="font-display text-xl sm:text-2xl font-extrabold text-white">
+                                    —
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <div class="text-right">
+                                    <div id="reveal-tier-badge" class="inline-block px-2.5 py-0.5 rounded-lg text-xs font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-400/30">
+                                        Deep Diver
+                                    </div>
+                                    <div class="text-xs text-slate-400 mt-1">
+                                        +<span id="reveal-meters" class="text-cyan-300 font-bold">0</span>m descent
+                                    </div>
+                                </div>
+                                <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-cyan-500/20 to-fuchsia-500/20 border border-cyan-400/40 flex flex-col items-center justify-center">
+                                    <span id="reveal-score" class="font-display text-xl font-extrabold text-white">0</span>
+                                    <span class="text-[9px] uppercase tracking-wider text-cyan-300">PTS</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <p id="reveal-commentary" class="text-sm text-slate-200 leading-relaxed bg-slate-900/80 p-3.5 rounded-xl border border-slate-800">
+                            Commentary loads here...
+                        </p>
+
+                        <!-- Top 3 Ultra-Rare Examples Box -->
+                        <div id="reveal-rare-examples-box" class="hidden p-3.5 rounded-xl bg-cyan-950/35 border border-cyan-500/25">
+                            <div class="text-[11px] font-bold uppercase tracking-wider text-cyan-300 mb-1.5">
+                                💎 Ultra-Rare Valid Pulls
+                            </div>
+                            <div id="reveal-rare-examples" class="flex flex-wrap gap-1.5"></div>
+                        </div>
+
+                        <div class="flex justify-end">
+                            <button id="btn-next-prompt" type="button"
+                                class="w-full sm:w-auto px-6 py-3 rounded-2xl font-display font-bold text-sm sm:text-base text-slate-950 bg-gradient-to-r from-cyan-300 to-sky-400 hover:from-cyan-200 hover:to-sky-300 transition flex items-center justify-center gap-2 cursor-pointer">
+                                <span id="next-prompt-label">Next Depth</span>
+                                <span>&rarr;</span>
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+
+        <!-- ========================================================= -->
+        <!-- SCREEN 3: END-OF-DIVE BATHYMETRIC SUMMARY                 -->
+        <!-- ========================================================= -->
+        <section id="screen-summary" class="hidden max-w-3xl mx-auto w-full ocean-glass rounded-3xl p-6 sm:p-8 space-y-6">
+            <div class="text-center space-y-2">
+                <div id="summary-rank-badge" class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-fuchsia-500/20 border border-fuchsia-400/40 text-fuchsia-200 text-xs sm:text-sm font-bold uppercase tracking-wider">
+                    🦐 Abyssal Explorer
+                </div>
+                <h2 class="font-display text-3xl sm:text-5xl font-extrabold text-white">
+                    <span id="summary-total-depth" class="bg-gradient-to-r from-cyan-300 via-sky-300 to-fuchsia-300 bg-clip-text text-transparent">0</span>m Reached
+                </h2>
+                <p id="summary-subtitle" class="text-slate-300 text-sm sm:text-base max-w-lg mx-auto">
+                    You scored <span id="summary-total-points" class="font-bold text-white">0</span> / 700 rarity points across 7 prompts.
+                </p>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex flex-col sm:flex-row items-center justify-center gap-3">
+                <button id="btn-share-result" type="button"
+                    class="w-full sm:w-auto px-6 py-3.5 rounded-2xl font-display font-bold text-sm sm:text-base text-white bg-slate-800 hover:bg-slate-700 border border-slate-600 transition flex items-center justify-center gap-2 cursor-pointer">
+                    <svg class="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/>
+                    </svg>
+                    <span id="share-btn-text">Share Dive Log</span>
+                </button>
+                <button id="btn-new-dive" type="button"
+                    class="w-full sm:w-auto px-7 py-3.5 rounded-2xl font-display font-bold text-sm sm:text-base text-slate-950 bg-gradient-to-r from-cyan-300 via-sky-400 to-teal-300 hover:from-cyan-200 hover:to-teal-200 shadow-lg shadow-cyan-500/25 transition flex items-center justify-center gap-2 cursor-pointer">
+                    <span>Dive Again</span>
+                    <span>🦐</span>
+                </button>
+            </div>
+
+            <!-- 7-Prompt Breakdown List -->
+            <div class="space-y-3 pt-2">
+                <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 px-1">Dive Log Breakdown</h3>
+                <div id="summary-breakdown-list" class="space-y-2.5 max-h-[420px] overflow-y-auto pr-1">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Subtle Footer -->
+    <footer class="w-full max-w-5xl mx-auto px-4 py-3 text-center text-xs text-slate-400/75 z-10">
+        Powered directly by your Google Gemini AI Studio API Key • Client-side only
+    </footer>
+
+    <script>
+        /**
+         * KRILLION — Deep-Sea Rarity Trivia Clone
+         * Complete single-file client-side implementation using Google Gemini REST API
+         * with Structured JSON Output (`responseSchema`).
+         */
+
+        // =========================================================================
+        // 1. STATE & CONSTANTS
+        // =========================================================================
+        const STORAGE_KEY_API = 'krillion_gemini_api_key';
+        const STORAGE_KEY_MODEL = 'krillion_gemini_model';
+        const STORAGE_KEY_CUSTOM_MODEL = 'krillion_gemini_custom_model';
+        const TOTAL_PROMPTS = 7;
+        const SECONDS_PER_PROMPT = 25.0;
+        const API_TIMEOUT_MS = 15000;
+
+        // Curated high-craft prompts for Instant Built-In Deck, Hybrid Mode, or fallback
+        const CURATED_PROMPT_POOL = [
+            { category: "Geography", prompt: "Name a country that borders neither an ocean nor a sea (landlocked)." },
+            { category: "Science", prompt: "Name a chemical element whose symbol does not match its English name (e.g., Au for Gold)." },
+            { category: "Nature", prompt: "Name a mammal capable of true flight or gliding." },
+            { category: "Pop Culture", prompt: "Name a Pixar feature film released before 2020." },
+            { category: "History", prompt: "Name an ancient civilization that flourished in the Americas before 1492." },
+            { category: "Food & Drink", prompt: "Name a type of pasta shape." },
+            { category: "Wordplay", prompt: "Name an English word that contains all five standard vowels (A, E, I, O, U)." },
+            { category: "Geography", prompt: "Name a capital city located in the Southern Hemisphere." },
+            { category: "Science", prompt: "Name a moon in our Solar System (excluding Earth's Moon)." },
+            { category: "Nature", prompt: "Name a flightless bird species." },
+            { category: "Food & Drink", prompt: "Name a variety of cheese originating from Europe." },
+            { category: "Pop Culture", prompt: "Name an instrument commonly found in a symphony orchestra." },
+            { category: "History", prompt: "Name a recipient of the Nobel Prize in Physics or Chemistry." },
+            { category: "Geography", prompt: "Name a U.S. state that shares a land border with Canada." }
+        ];
+
+        const gameState = {
+            apiKey: '',
+            model: 'gemini-3.8-flash',
+            customModel: '',
+            promptMode: 'ai-fresh',
+            prompts: [],
+            currentIndex: 0,
+            totalPoints: 0,
+            history: [], // Stores results for all 7 prompts
+            timerInterval: null,
+            timeRemaining: SECONDS_PER_PROMPT,
+            isEvaluating: false,
+            roundResolved: false
+        };
+
+        // =========================================================================
+        // 2. DOM ELEMENT REFERENCES
+        // =========================================================================
+        const els = {
+            oceanBackdrop: document.getElementById('ocean-backdrop'),
+            sunrays: document.getElementById('sunrays'),
+            particleContainer: document.getElementById('particle-container'),
+            headerZoneBadge: document.getElementById('header-zone-badge'),
+            headerZoneText: document.getElementById('header-zone-text'),
+            btnApiSettings: document.getElementById('btn-api-settings'),
+
+            toastBanner: document.getElementById('toast-banner'),
+            toastMessage: document.getElementById('toast-message'),
+
+            screenSetup: document.getElementById('screen-setup'),
+            screenGame: document.getElementById('screen-game'),
+            screenSummary: document.getElementById('screen-summary'),
+
+            setupForm: document.getElementById('setup-form'),
+            apiKeyInput: document.getElementById('api-key-input'),
+            toggleKeyVisibility: document.getElementById('toggle-key-visibility'),
+            clearKeyBtn: document.getElementById('clear-key-btn'),
+            savedKeyIndicator: document.getElementById('saved-key-indicator'),
+            modelSelect: document.getElementById('model-select'),
+            customModelInput: document.getElementById('custom-model-input'),
+            promptModeSelect: document.getElementById('prompt-mode-select'),
+            setupStatusBox: document.getElementById('setup-status-box'),
+            setupStatusIcon: document.getElementById('setup-status-icon'),
+            setupStatusTitle: document.getElementById('setup-status-title'),
+            setupStatusDetail: document.getElementById('setup-status-detail'),
+            setupErrorActions: document.getElementById('setup-error-actions'),
+            btnRetryDive: document.getElementById('btn-retry-dive'),
+            btnFallbackOfflineDeck: document.getElementById('btn-fallback-offline-deck'),
+            btnTestConnection: document.getElementById('btn-test-connection'),
+            btnBeginDescent: document.getElementById('btn-begin-descent'),
+
+            depthCounter: document.getElementById('depth-counter'),
+            zonePill: document.getElementById('zone-pill'),
+            depthFillVertical: document.getElementById('depth-fill-vertical'),
+            krillAvatarVertical: document.getElementById('krill-avatar-vertical'),
+            depthFillHorizontal: document.getElementById('depth-fill-horizontal'),
+            krillAvatarHorizontal: document.getElementById('krill-avatar-horizontal'),
+            scoreTotalLabel: document.getElementById('score-total-label'),
+            promptDots: document.getElementById('prompt-dots'),
+
+            roundBadge: document.getElementById('round-badge'),
+            categoryBadge: document.getElementById('category-badge'),
+            timerContainer: document.getElementById('timer-container'),
+            timerText: document.getElementById('timer-text'),
+            timerBar: document.getElementById('timer-bar'),
+            promptText: document.getElementById('prompt-text'),
+            promptHint: document.getElementById('prompt-hint'),
+
+            answerInputArea: document.getElementById('answer-input-area'),
+            answerForm: document.getElementById('answer-form'),
+            answerInput: document.getElementById('answer-input'),
+            btnSubmitAnswer: document.getElementById('btn-submit-answer'),
+            submitBtnText: document.getElementById('submit-btn-text'),
+            submitSpinner: document.getElementById('submit-spinner'),
+            inlineFeedback: document.getElementById('inline-feedback'),
+            inlineFeedbackText: document.getElementById('inline-feedback-text'),
+
+            resultRevealArea: document.getElementById('result-reveal-area'),
+            revealAnswerName: document.getElementById('reveal-answer-name'),
+            revealTierBadge: document.getElementById('reveal-tier-badge'),
+            revealMeters: document.getElementById('reveal-meters'),
+            revealScore: document.getElementById('reveal-score'),
+            revealCommentary: document.getElementById('reveal-commentary'),
+            revealRareExamplesBox: document.getElementById('reveal-rare-examples-box'),
+            revealRareExamples: document.getElementById('reveal-rare-examples'),
+            btnNextPrompt: document.getElementById('btn-next-prompt'),
+            nextPromptLabel: document.getElementById('next-prompt-label'),
+
+            summaryRankBadge: document.getElementById('summary-rank-badge'),
+            summaryTotalDepth: document.getElementById('summary-total-depth'),
+            summaryTotalPoints: document.getElementById('summary-total-points'),
+            summarySubtitle: document.getElementById('summary-subtitle'),
+            btnShareResult: document.getElementById('btn-share-result'),
+            shareBtnText: document.getElementById('share-btn-text'),
+            btnNewDive: document.getElementById('btn-new-dive'),
+            summaryBreakdownList: document.getElementById('summary-breakdown-list')
+        };
+
+        // =========================================================================
+        // 3. INITIALIZATION & STORAGE HELPERS
+        // =========================================================================
+        function initApp() {
+            loadSavedSettings();
+            spawnOceanParticles();
+            attachEventListeners();
+        }
+
+        function spawnOceanParticles() {
+            if (!els.particleContainer) return;
+            els.particleContainer.innerHTML = '';
+            const count = 22;
+            for (let i = 0; i < count; i++) {
+                const bubble = document.createElement('div');
+                bubble.className = 'bubble';
+                const size = (Math.random() * 6 + 3).toFixed(1);
+                const left = (Math.random() * 100).toFixed(1);
+                const duration = (Math.random() * 12 + 10).toFixed(1);
+                const delay = (Math.random() * -18).toFixed(1);
+                const drift = ((Math.random() - 0.5) * 60).toFixed(0);
+                const maxOpacity = (Math.random() * 0.35 + 0.12).toFixed(2);
+
+                bubble.style.width = `${size}px`;
+                bubble.style.height = `${size}px`;
+                bubble.style.left = `${left}vw`;
+                bubble.style.animationDuration = `${duration}s`;
+                bubble.style.animationDelay = `${delay}s`;
+                bubble.style.setProperty('--drift', `${drift}px`);
+                bubble.style.setProperty('--max-opacity', maxOpacity);
+                bubble.style.background = i % 3 === 0
+                    ? 'radial-gradient(circle, rgba(103,232,249,0.85) 0%, rgba(56,189,248,0.15) 70%, transparent 100%)'
+                    : 'radial-gradient(circle, rgba(244,114,182,0.75) 0%, rgba(192,132,252,0.15) 70%, transparent 100%)';
+                els.particleContainer.appendChild(bubble);
+            }
+        }
+
+        function loadSavedSettings() {
+            try {
+                const savedKey = localStorage.getItem(STORAGE_KEY_API);
+                const savedModel = localStorage.getItem(STORAGE_KEY_MODEL);
+                const savedCustomModel = localStorage.getItem(STORAGE_KEY_CUSTOM_MODEL);
+
+                if (savedKey) {
+                    gameState.apiKey = savedKey;
+                    els.apiKeyInput.value = savedKey;
+                    els.savedKeyIndicator.classList.remove('hidden');
+                    els.clearKeyBtn.classList.remove('hidden');
+                }
+                if (savedCustomModel) {
+                    gameState.customModel = savedCustomModel;
+                    els.customModelInput.value = savedCustomModel;
+                }
+                if (savedModel) {
+                    const validOptions = Array.from(els.modelSelect.options).map(o => o.value);
+                    if (validOptions.includes(savedModel)) {
+                        gameState.model = savedModel;
+                        els.modelSelect.value = savedModel;
+                    } else {
+                        gameState.model = 'gemini-3.8-flash';
+                        els.modelSelect.value = 'gemini-3.8-flash';
+                    }
+                    toggleCustomModelVisibility();
+                }
+            } catch (err) {
+                console.warn('LocalStorage unavailable:', err);
+            }
+        }
+
+        function saveSettings(key, modelChoice, customModelStr) {
+            try {
+                localStorage.setItem(STORAGE_KEY_API, key);
+                localStorage.setItem(STORAGE_KEY_MODEL, modelChoice);
+                if (customModelStr !== undefined) {
+                    localStorage.setItem(STORAGE_KEY_CUSTOM_MODEL, customModelStr);
+                }
+                els.savedKeyIndicator.classList.remove('hidden');
+                els.clearKeyBtn.classList.remove('hidden');
+            } catch (err) {
+                console.warn('Could not persist settings:', err);
+            }
+        }
+
+        function getActiveModelId() {
+            if (els.modelSelect.value === 'custom') {
+                return els.customModelInput.value.trim() || 'gemini-3.8-flash';
+            }
+            return els.modelSelect.value;
+        }
+
+        function toggleCustomModelVisibility() {
+            if (els.modelSelect.value === 'custom') {
+                els.customModelInput.classList.remove('hidden');
+            } else {
+                els.customModelInput.classList.add('hidden');
+            }
+        }
+
+        function setSetupStatus(type, title, detail = '', showErrorButtons = false) {
+            els.setupStatusBox.classList.remove(
+                'hidden',
+                'bg-cyan-950/60', 'border-cyan-400/40', 'text-cyan-100',
+                'bg-rose-950/75', 'border-rose-500/50', 'text-rose-100',
+                'bg-emerald-950/70', 'border-emerald-400/45', 'text-emerald-100'
+            );
+
+            if (type === 'loading') {
+                els.setupStatusIcon.textContent = '📡';
+                els.setupStatusBox.classList.add('bg-cyan-950/60', 'border-cyan-400/40', 'text-cyan-100');
+            } else if (type === 'success') {
+                els.setupStatusIcon.textContent = '✅';
+                els.setupStatusBox.classList.add('bg-emerald-950/70', 'border-emerald-400/45', 'text-emerald-100');
+            } else {
+                els.setupStatusIcon.textContent = '🚨';
+                els.setupStatusBox.classList.add('bg-rose-950/75', 'border-rose-500/50', 'text-rose-100');
+            }
+
+            els.setupStatusTitle.textContent = title;
+            els.setupStatusDetail.textContent = detail;
+
+            if (showErrorButtons) {
+                els.setupErrorActions.classList.remove('hidden');
+            } else {
+                els.setupErrorActions.classList.add('hidden');
+            }
+        }
+
+        function hideSetupStatus() {
+            els.setupStatusBox.classList.add('hidden');
+            els.setupErrorActions.classList.add('hidden');
+        }
+
+        function showToast(message, type = 'error') {
+            els.toastBanner.classList.remove(
+                'hidden',
+                'bg-rose-950/90', 'border-rose-500/50', 'text-rose-100',
+                'bg-emerald-950/90', 'border-emerald-500/50', 'text-emerald-100'
+            );
+            if (type === 'success') {
+                els.toastBanner.classList.add('bg-emerald-950/90', 'border-emerald-500/50', 'text-emerald-100');
+            } else {
+                els.toastBanner.classList.add('bg-rose-950/90', 'border-rose-500/50', 'text-rose-100');
+            }
+            els.toastMessage.textContent = message;
+        }
+
+        function hideToast() {
+            els.toastBanner.classList.add('hidden');
+        }
+
+        // =========================================================================
+        // 4. GEMINI AI STUDIO API INTEGRATION (STRUCTURED JSON OUTPUT + TIMEOUT)
+        // =========================================================================
+        async function fetchWithTimeout(url, options, timeoutMs = API_TIMEOUT_MS) {
+            const controller = new AbortController();
+            const timerId = setTimeout(() => controller.abort(), timeoutMs);
+            try {
+                return await fetch(url, { ...options, signal: controller.signal });
+            } catch (err) {
+                if (err.name === 'AbortError') {
+                    throw new Error(`Request timed out after ${timeoutMs / 1000}s. Check your network or try a faster model.`);
+                }
+                throw new Error(`Network / CORS error reaching Gemini API: ${err.message}`);
+            } finally {
+                clearTimeout(timerId);
+            }
+        }
+
+        async function callGeminiStructured({ systemInstruction, userPrompt, responseSchema, temperature = 0.7, useThinking = true }) {
+            const activeModel = getActiveModelId();
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(activeModel)}:generateContent?key=${encodeURIComponent(gameState.apiKey)}`;
+
+            const generationConfig = {
+                temperature,
+                responseMimeType: "application/json"
+            };
+
+            if (responseSchema) {
+                generationConfig.responseSchema = responseSchema;
+            }
+
+            // Include low-latency thinkingConfig on 3.8+ models unless disabled in fallback retry
+            if (useThinking && activeModel.includes('3.8')) {
+                generationConfig.thinkingConfig = { thinkingLevel: "low" };
+            }
+
+            const payload = {
+                systemInstruction: {
+                    parts: [{ text: systemInstruction }]
+                },
+                contents: [
+                    {
+                        role: 'user',
+                        parts: [{ text: userPrompt }]
+                    }
+                ],
+                generationConfig
+            };
+
+            const response = await fetchWithTimeout(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            }, API_TIMEOUT_MS);
+
+            if (!response.ok) {
+                let errorDetail = `HTTP ${response.status}`;
+                try {
+                    const errJson = await response.json();
+                    if (errJson?.error?.message) {
+                        errorDetail = errJson.error.message;
+                    }
+                } catch (_) {}
+
+                // If the model rejects thinkingConfig or responseSchema with HTTP 400, automatically retry without them!
+                if (response.status === 400 && (useThinking || responseSchema) &&
+                    /thinking|schema|unknown name|not supported/i.test(errorDetail)) {
+                    return await callGeminiStructured({
+                        systemInstruction: systemInstruction + "\nRespond ONLY with valid raw JSON matching the requested fields.",
+                        userPrompt,
+                        responseSchema: null,
+                        temperature,
+                        useThinking: false
+                    });
+                }
+
+                if (response.status === 400) {
+                    throw new Error(`Bad Request (400): ${errorDetail}`);
+                } else if (response.status === 403 || response.status === 401) {
+                    throw new Error(`Unauthorized (${response.status}): Check that your Gemini API key is valid and enabled.`);
+                } else if (response.status === 404) {
+                    throw new Error(`Model "${activeModel}" not found (404). Try another model in the selector or enter a custom model ID.`);
+                } else if (response.status === 429) {
+                    throw new Error(`Rate limit exceeded (429): Too many requests. Wait a few seconds and retry.`);
+                } else {
+                    throw new Error(`Gemini API error (${response.status}): ${errorDetail}`);
+                }
+            }
+
+            const data = await response.json();
+            const parts = data?.candidates?.[0]?.content?.parts || [];
+            // Skip any thought parts if present and grab the JSON text part
+            const textPart = parts.find(p => typeof p.text === 'string' && !p.thought) || parts.find(p => typeof p.text === 'string');
+            const rawText = textPart?.text;
+
+            if (!rawText) {
+                throw new Error('Gemini returned an empty response. Please try again.');
+            }
+
+            const cleanedJson = rawText.replace(/^```json\s*/i, '').replace(/```\s*$/i, '').trim();
+            return JSON.parse(cleanedJson);
+        }
+
+        /**
+         * Generates 7 open-ended trivia prompts across diverse categories using Gemini
+         */
+        async function generateDivePrompts() {
+            const systemInstruction = `You are the game designer for "Krillion", a rarity trivia game where players try to name valid yet obscure answers to open-ended prompts.
+Generate exactly 7 distinct, fun, unambiguous open-ended trivia prompts across these 7 categories in order: Geography, Science, Pop Culture, History, Nature, Food & Drink, Wordplay.
+Each prompt MUST have at least 15+ valid real-world answers ranging from super obvious (known by everyone) to super obscure (known only by enthusiasts).
+Start each prompt with "Name a..." or "Name an...". Keep each prompt under 16 words.
+Return JSON: { "prompts": [ { "category": "...", "prompt": "..." } ] }`;
+
+            const responseSchema = {
+                type: "OBJECT",
+                properties: {
+                    prompts: {
+                        type: "ARRAY",
+                        items: {
+                            type: "OBJECT",
+                            properties: {
+                                category: { type: "STRING" },
+                                prompt: { type: "STRING" }
+                            },
+                            required: ["category", "prompt"]
+                        }
+                    }
+                },
+                required: ["prompts"]
+            };
+
+            const result = await callGeminiStructured({
+                systemInstruction,
+                userPrompt: "Create a fresh, engaging 7-prompt Krillion dive deck.",
+                responseSchema,
+                temperature: 0.9
+            });
+
+            if (!result?.prompts || result.prompts.length < 7) {
+                throw new Error('Gemini returned fewer than 7 prompts. Try again or use the Instant Prompt Deck.');
+            }
+            return result.prompts.slice(0, 7);
+        }
+
+        /**
+         * Evaluates the player's answer for strict validity, rarity (1-100), and top 3 rare examples
+         */
+        async function evaluatePlayerAnswer(promptObj, userAnswer) {
+            const systemInstruction = `You are the witty deep-sea trivia judge for "Krillion".
+Evaluate whether the player's answer strictly satisfies the trivia prompt.
+
+Rules:
+1. Be fair with minor spelling typos if the intended real-world entity is unmistakable (put the clean, properly capitalized name in 'canonicalName').
+2. If the answer is factually wrong, fictional when real is required, or violates any constraint of the prompt, set 'isValid' to false, 'rarityScore' to 0, 'tier' to "Invalid", write a snappy 1-sentence explanation in 'commentary' of why it doesn't count, and set 'rareExamples' to [].
+3. If 'isValid' is true, assign an integer 'rarityScore' from 1 to 100 estimating how rare/obscure this answer is among typical trivia players:
+   - 1 to 15: "Plankton" (The top 1-3 most obvious answers almost everyone says immediately)
+   - 16 to 35: "Schooling Fish" (Very common or classic "I'm being clever" traps that lots of players pick)
+   - 36 to 60: "Reef Dweller" (Solid, moderately well-known answer, not the first thing people shout)
+   - 61 to 80: "Deep Diver" (Impressive pull; requires genuine topic familiarity)
+   - 81 to 94: "Abyssal" (Deep cut; very few general players would think of this under a 25s clock)
+   - 95 to 100: "One in a Krillion" (Remarkable, ultra-obscure yet 100% legitimate pull)
+4. Write a punchy, witty 1-sentence 'commentary' explaining why their answer earned that rarity score.
+5. Provide 'rareExamples': an array of exactly 3 ultra-obscure (90+ rarity) valid answers to this prompt.
+Return JSON with keys: isValid, rarityScore, tier, canonicalName, commentary, rareExamples.`;
+
+            const responseSchema = {
+                type: "OBJECT",
+                properties: {
+                    isValid: { type: "BOOLEAN" },
+                    rarityScore: { type: "INTEGER" },
+                    tier: { type: "STRING" },
+                    canonicalName: { type: "STRING" },
+                    commentary: { type: "STRING" },
+                    rareExamples: {
+                        type: "ARRAY",
+                        items: { type: "STRING" }
+                    }
+                },
+                required: ["isValid", "rarityScore", "tier", "canonicalName", "commentary", "rareExamples"]
+            };
+
+            const userPrompt = `Category: ${promptObj.category}
+Prompt: "${promptObj.prompt}"
+Player's Answer: "${userAnswer}"`;
+
+            return await callGeminiStructured({
+                systemInstruction,
+                userPrompt,
+                responseSchema,
+                temperature: 0.35
+            });
+        }
+
+        // =========================================================================
+        // 5. GAME FLOW & TIMER MANAGEMENT
+        // =========================================================================
+        async function testGeminiConnection() {
+            hideToast();
+            const key = els.apiKeyInput.value.trim();
+            if (!key) {
+                setSetupStatus('error', 'Missing API Key', 'Please paste your Google Gemini AI Studio API key first.');
+                els.apiKeyInput.focus();
+                return;
+            }
+
+            const activeModel = getActiveModelId();
+            gameState.apiKey = key;
+            gameState.model = activeModel;
+            saveSettings(key, els.modelSelect.value, els.customModelInput.value.trim());
+
+            els.btnTestConnection.disabled = true;
+            setSetupStatus('loading', `Pinging ${activeModel}...`, 'Verifying API key and structured JSON response.');
+
+            try {
+                const ping = await callGeminiStructured({
+                    systemInstruction: 'Return JSON: {"ok": true, "message": "Ready to dive"}',
+                    userPrompt: 'Ping',
+                    responseSchema: {
+                        type: "OBJECT",
+                        properties: {
+                            ok: { type: "BOOLEAN" },
+                            message: { type: "STRING" }
+                        },
+                        required: ["ok", "message"]
+                    },
+                    temperature: 0
+                });
+                setSetupStatus('success', `Connected to ${activeModel}!`, ping?.message || 'Your API key works. Click Begin Descent to play!');
+            } catch (error) {
+                setSetupStatus('error', 'Connection Check Failed', error.message || 'Could not reach Gemini API.', true);
+            } finally {
+                els.btnTestConnection.disabled = false;
+            }
+        }
+
+        async function startNewDive(forceInstantDeck = false) {
+            hideToast();
+            const key = els.apiKeyInput.value.trim();
+            if (!key) {
+                setSetupStatus('error', 'Missing API Key', 'Please paste your Google Gemini AI Studio API key first.');
+                els.apiKeyInput.focus();
+                return;
+            }
+
+            const activeModel = getActiveModelId();
+            gameState.apiKey = key;
+            gameState.model = activeModel;
+            gameState.promptMode = forceInstantDeck ? 'instant-deck' : els.promptModeSelect.value;
+            saveSettings(key, els.modelSelect.value, els.customModelInput.value.trim());
+
+            // Set loading state on Begin Descent button
+            const originalBtnHtml = els.btnBeginDescent.innerHTML;
+            els.btnBeginDescent.disabled = true;
+            els.btnTestConnection.disabled = true;
+            els.btnBeginDescent.innerHTML = `<span class="w-5 h-5 border-2 border-slate-950 border-t-transparent rounded-full animate-spin"></span><span>Preparing Submersible...</span>`;
+
+            try {
+                if (gameState.promptMode === 'instant-deck') {
+                    setSetupStatus('loading', 'Loading Instant Prompt Deck...', 'Using curated deep-sea prompts (Gemini will judge your answers).');
+                    gameState.prompts = [...CURATED_PROMPT_POOL].sort(() => Math.random() - 0.5).slice(0, TOTAL_PROMPTS);
+                } else if (gameState.promptMode === 'ai-fresh') {
+                    setSetupStatus('loading', `Connecting to ${activeModel}...`, 'Generating 7 fresh deep-sea rarity prompts (15s timeout)...');
+                    gameState.prompts = await generateDivePrompts();
+                } else {
+                    // Curated + AI Hybrid: 4 shuffled curated + 3 AI-generated
+                    setSetupStatus('loading', `Connecting to ${activeModel}...`, 'Blending curated prompts with fresh AI challenges...');
+                    const shuffledCurated = [...CURATED_PROMPT_POOL].sort(() => Math.random() - 0.5).slice(0, 4);
+                    const aiDeck = await generateDivePrompts();
+                    gameState.prompts = [...shuffledCurated, ...aiDeck.slice(0, 3)].sort(() => Math.random() - 0.5);
+                }
+
+                hideSetupStatus();
+
+                // Reset game metrics
+                gameState.currentIndex = 0;
+                gameState.totalPoints = 0;
+                gameState.history = [];
+
+                // Switch to Game Screen
+                els.screenSetup.classList.add('hidden');
+                els.screenSummary.classList.add('hidden');
+                els.screenGame.classList.remove('hidden');
+                els.headerZoneBadge.classList.remove('hidden');
+
+                updateOceanAtmosphere(0);
+                renderProgressDots();
+                loadPromptRound(0);
+
+            } catch (error) {
+                setSetupStatus(
+                    'error',
+                    'Submersible Launch Failed',
+                    error.message || 'Failed to connect to Gemini API.',
+                    true
+                );
+            } finally {
+                els.btnBeginDescent.disabled = false;
+                els.btnTestConnection.disabled = false;
+                els.btnBeginDescent.innerHTML = originalBtnHtml;
+            }
+        }
+
+        function loadPromptRound(index) {
+            clearInterval(gameState.timerInterval);
+            gameState.currentIndex = index;
+            gameState.timeRemaining = SECONDS_PER_PROMPT;
+            gameState.isEvaluating = false;
+            gameState.roundResolved = false;
+
+            const currentPrompt = gameState.prompts[index];
+
+            // Update UI Headers
+            els.roundBadge.textContent = `PROMPT ${index + 1} / ${TOTAL_PROMPTS}`;
+            els.categoryBadge.textContent = currentPrompt.category;
+            els.promptText.textContent = currentPrompt.prompt;
+            els.promptHint.textContent = 'Think obscure! You have 25 seconds — invalid guesses keep the clock running.';
+
+            // Reset Input & Reveal Panels
+            els.answerInputArea.classList.remove('hidden');
+            els.resultRevealArea.classList.add('hidden');
+            els.inlineFeedback.classList.add('hidden');
+            els.answerInput.value = '';
+            els.answerInput.disabled = false;
+            els.btnSubmitAnswer.disabled = false;
+            els.submitBtnText.textContent = 'Dive';
+            els.submitSpinner.classList.add('hidden');
+
+            renderProgressDots();
+            updateTimerUI();
+
+            // Focus input smoothly
+            setTimeout(() => els.answerInput.focus(), 50);
+
+            // Start 100ms precision countdown
+            const startTime = performance.now();
+            gameState.timerInterval = setInterval(() => {
+                if (gameState.roundResolved) {
+                    clearInterval(gameState.timerInterval);
+                    return;
+                }
+                // Pause clock slightly while waiting on network API evaluation so user isn't punished for latency
+                if (gameState.isEvaluating) return;
+
+                gameState.timeRemaining = Math.max(0, gameState.timeRemaining - 0.1);
+                updateTimerUI();
+
+                if (gameState.timeRemaining <= 0) {
+                    clearInterval(gameState.timerInterval);
+                    handleRoundTimeout();
+                }
+            }, 100);
+        }
+
+        function updateTimerUI() {
+            const pct = (gameState.timeRemaining / SECONDS_PER_PROMPT) * 100;
+            els.timerText.textContent = `${gameState.timeRemaining.toFixed(1)}s`;
+            els.timerBar.style.width = `${pct}%`;
+
+            els.timerContainer.classList.remove('border-rose-500/70', 'text-rose-300', 'border-amber-400/60', 'border-slate-700');
+            els.timerBar.classList.remove('from-rose-500', 'to-amber-500', 'from-cyan-400', 'to-emerald-400');
+
+            if (gameState.timeRemaining <= 5.0) {
+                els.timerContainer.classList.add('border-rose-500/70', 'text-rose-300');
+                els.timerBar.classList.add('from-rose-500', 'to-amber-500');
+            } else if (gameState.timeRemaining <= 10.0) {
+                els.timerContainer.classList.add('border-amber-400/60');
+                els.timerBar.classList.add('from-amber-400', 'to-yellow-300');
+            } else {
+                els.timerContainer.classList.add('border-slate-700');
+                els.timerBar.classList.add('from-cyan-400', 'to-emerald-400');
+            }
+        }
+
+        async function handleAnswerSubmit(e) {
+            e.preventDefault();
+            if (gameState.isEvaluating || gameState.roundResolved) return;
+
+            const rawAnswer = els.answerInput.value.trim();
+            if (!rawAnswer) {
+                els.answerInput.focus();
+                return;
+            }
+
+            // Lock input while Gemini evaluates
+            gameState.isEvaluating = true;
+            els.answerInput.disabled = true;
+            els.btnSubmitAnswer.disabled = true;
+            els.submitBtnText.textContent = 'Scanning...';
+            els.submitSpinner.classList.remove('hidden');
+            els.inlineFeedback.classList.add('hidden');
+
+            try {
+                const currentPrompt = gameState.prompts[gameState.currentIndex];
+                const evaluation = await evaluatePlayerAnswer(currentPrompt, rawAnswer);
+
+                if (gameState.roundResolved) return;
+
+                if (!evaluation.isValid) {
+                    // Invalid guess: timer resumes, show punchy rejection so they can guess again!
+                    gameState.isEvaluating = false;
+                    els.answerInput.disabled = false;
+                    els.btnSubmitAnswer.disabled = false;
+                    els.submitBtnText.textContent = 'Dive';
+                    els.submitSpinner.classList.add('hidden');
+
+                    els.inlineFeedbackText.textContent = evaluation.commentary || `"${rawAnswer}" doesn't fit — keep swimming!`;
+                    els.inlineFeedback.classList.remove('hidden');
+                    els.inlineFeedback.classList.remove('animate-shake');
+                    void els.inlineFeedback.offsetWidth; // trigger reflow
+                    els.inlineFeedback.classList.add('animate-shake');
+
+                    els.answerInput.select();
+                    return;
+                }
+
+                // Valid answer! Lock round and award depth
+                gameState.roundResolved = true;
+                gameState.isEvaluating = false;
+                clearInterval(gameState.timerInterval);
+
+                const clampedScore = Math.max(1, Math.min(100, Math.round(evaluation.rarityScore || 10)));
+                const metersGained = clampedScore * 10;
+                gameState.totalPoints += clampedScore;
+
+                const roundRecord = {
+                    category: currentPrompt.category,
+                    prompt: currentPrompt.prompt,
+                    answer: evaluation.canonicalName || rawAnswer,
+                    score: clampedScore,
+                    meters: metersGained,
+                    tier: evaluation.tier || getTierFromScore(clampedScore),
+                    commentary: evaluation.commentary,
+                    rareExamples: Array.isArray(evaluation.rareExamples) ? evaluation.rareExamples.slice(0, 3) : [],
+                    timedOut: false
+                };
+                gameState.history.push(roundRecord);
+
+                updateOceanAtmosphere(gameState.totalPoints * 10);
+                renderProgressDots();
+                showRoundReveal(roundRecord);
+
+            } catch (error) {
+                gameState.isEvaluating = false;
+                els.answerInput.disabled = false;
+                els.btnSubmitAnswer.disabled = false;
+                els.submitBtnText.textContent = 'Dive';
+                els.submitSpinner.classList.add('hidden');
+                showToast(error.message || 'Error evaluating answer.');
+            }
+        }
+
+        function handleRoundTimeout() {
+            if (gameState.roundResolved) return;
+            gameState.roundResolved = true;
+            gameState.isEvaluating = false;
+
+            const currentPrompt = gameState.prompts[gameState.currentIndex];
+            const roundRecord = {
+                category: currentPrompt.category,
+                prompt: currentPrompt.prompt,
+                answer: '⏰ Ran out of air (No answer)',
+                score: 0,
+                meters: 0,
+                tier: 'Surface Drift',
+                commentary: 'The 25-second oxygen timer expired before you locked in a valid answer! No depth gained this round.',
+                timedOut: true
+            };
+            gameState.history.push(roundRecord);
+
+            renderProgressDots();
+            showRoundReveal(roundRecord);
+        }
+
+        function showRoundReveal(record) {
+            els.answerInputArea.classList.add('hidden');
+            els.resultRevealArea.classList.remove('hidden');
+
+            els.revealAnswerName.textContent = record.answer;
+            els.revealTierBadge.textContent = getTierEmoji(record.score) + ' ' + record.tier;
+            els.revealMeters.textContent = record.meters.toLocaleString();
+            els.revealScore.textContent = record.score;
+            els.revealCommentary.textContent = record.commentary;
+
+            // Render Top 3 Ultra-Rare Examples if available
+            if (record.rareExamples && record.rareExamples.length > 0) {
+                els.revealRareExamplesBox.classList.remove('hidden');
+                els.revealRareExamples.innerHTML = record.rareExamples.map(ex =>
+                    `<span class="px-2.5 py-1 rounded-lg bg-cyan-900/50 border border-cyan-400/30 text-cyan-100 text-xs font-medium">${escapeHtml(ex)}</span>`
+                ).join('');
+            } else {
+                els.revealRareExamplesBox.classList.add('hidden');
+                els.revealRareExamples.innerHTML = '';
+            }
+
+            // Style tier badge dynamically
+            els.revealTierBadge.className = `inline-block px-2.5 py-0.5 rounded-lg text-xs font-bold border ${getTierBadgeClasses(record.score)}`;
+
+            if (gameState.currentIndex >= TOTAL_PROMPTS - 1) {
+                els.nextPromptLabel.textContent = 'Surface & View Dive Log';
+            } else {
+                els.nextPromptLabel.textContent = `Descend to Prompt ${gameState.currentIndex + 2}`;
+            }
+        }
+
+        function advanceToNextStep() {
+            if (gameState.currentIndex < TOTAL_PROMPTS - 1) {
+                loadPromptRound(gameState.currentIndex + 1);
+            } else {
+                showEndOfDiveSummary();
+            }
+        }
+
+        // =========================================================================
+        // 6. OCEAN DEPTH & VISUAL ATMOSPHERE UPDATES
+        // =========================================================================
+        function updateOceanAtmosphere(depthMeters) {
+            const clampedDepth = Math.min(7000, Math.max(0, depthMeters));
+            const pct = (clampedDepth / 7000) * 100;
+
+            els.depthCounter.textContent = clampedDepth.toLocaleString();
+            els.scoreTotalLabel.textContent = `${gameState.totalPoints} pts`;
+
+            // Update vertical and horizontal krill progress gauges
+            els.depthFillVertical.style.height = `${Math.max(3, pct)}%`;
+            els.krillAvatarVertical.style.top = `calc(${Math.min(86, pct)}% - 4px)`;
+
+            els.depthFillHorizontal.style.width = `${Math.max(4, pct)}%`;
+            els.krillAvatarHorizontal.style.left = `${Math.min(95, Math.max(5, pct))}%`;
+
+            // Determine Ocean Zone & Transition Gradients
+            let zoneName = '';
+            let zoneEmoji = '';
+            let gradientCss = '';
+            let sunrayOpacity = 0;
+
+            if (clampedDepth < 1000) {
+                zoneName = 'Epipelagic (Sunlight Zone)';
+                zoneEmoji = '☀️';
+                gradientCss = 'linear-gradient(180deg, #0284c7 0%, #0369a1 30%, #0f172a 80%, #020617 100%)';
+                sunrayOpacity = 1;
+            } else if (clampedDepth < 3000) {
+                zoneName = 'Mesopelagic (Twilight Zone)';
+                zoneEmoji = '🌗';
+                gradientCss = 'linear-gradient(180deg, #0369a1 0%, #1e3a8a 35%, #0f172a 80%, #020617 100%)';
+                sunrayOpacity = 0.45;
+            } else if (clampedDepth < 4500) {
+                zoneName = 'Bathypelagic (Midnight Zone)';
+                zoneEmoji = '🌑';
+                gradientCss = 'linear-gradient(180deg, #172554 0%, #1e1b4b 45%, #090d16 85%, #020617 100%)';
+                sunrayOpacity = 0.12;
+            } else if (clampedDepth < 6000) {
+                zoneName = 'Abyssopelagic (Abyssal Zone)';
+                zoneEmoji = '🔮';
+                gradientCss = 'linear-gradient(180deg, #1e1b4b 0%, #2e1065 45%, #050811 85%, #000000 100%)';
+                sunrayOpacity = 0;
+            } else {
+                zoneName = 'Hadalpelagic (Hadal Trench)';
+                zoneEmoji = '🦑';
+                gradientCss = 'linear-gradient(180deg, #3b0764 0%, #1f1035 40%, #030712 85%, #000000 100%)';
+                sunrayOpacity = 0;
+            }
+
+            els.oceanBackdrop.style.background = gradientCss;
+            els.sunrays.style.opacity = sunrayOpacity;
+            els.zonePill.textContent = `${zoneEmoji} ${zoneName}`;
+            els.headerZoneText.textContent = `${zoneName.split(' ')[0]} (${clampedDepth.toLocaleString()}m)`;
+        }
+
+        function renderProgressDots() {
+            els.promptDots.innerHTML = '';
+            for (let i = 0; i < TOTAL_PROMPTS; i++) {
+                const dot = document.createElement('div');
+                const record = gameState.history[i];
+
+                if (record) {
+                    if (record.score >= 81) {
+                        dot.className = 'h-2.5 rounded-full bg-fuchsia-400 shadow-sm shadow-fuchsia-400/60';
+                    } else if (record.score >= 36) {
+                        dot.className = 'h-2.5 rounded-full bg-cyan-400';
+                    } else if (record.score > 0) {
+                        dot.className = 'h-2.5 rounded-full bg-sky-600';
+                    } else {
+                        dot.className = 'h-2.5 rounded-full bg-rose-500/70';
+                    }
+                } else if (i === gameState.currentIndex) {
+                    dot.className = 'h-2.5 rounded-full bg-white animate-pulse';
+                } else {
+                    dot.className = 'h-2.5 rounded-full bg-slate-800';
+                }
+                els.promptDots.appendChild(dot);
+            }
+        }
+
+        // =========================================================================
+        // 7. END-OF-DIVE SUMMARY & CLIPBOARD SHARE
+        // =========================================================================
+        function showEndOfDiveSummary() {
+            clearInterval(gameState.timerInterval);
+            els.screenGame.classList.add('hidden');
+            els.screenSummary.classList.remove('hidden');
+
+            const totalDepth = gameState.totalPoints * 10;
+            els.summaryTotalDepth.textContent = totalDepth.toLocaleString();
+            els.summaryTotalPoints.textContent = gameState.totalPoints;
+
+            // Assign overall Diver Rank
+            let overallRank = '🦠 Surface Plankton';
+            if (totalDepth >= 6000) overallRank = '👑 Leviathan of the Hadal Trench';
+            else if (totalDepth >= 4800) overallRank = '🦐 Legendary Krillionaire';
+            else if (totalDepth >= 3600) overallRank = '🦑 Abyssal Navigator';
+            else if (totalDepth >= 2200) overallRank = '🐙 Deep-Reef Specialist';
+            else if (totalDepth >= 1000) overallRank = '🐠 Twilight Swimmer';
+
+            els.summaryRankBadge.textContent = overallRank;
+
+            // Render 7-Prompt Breakdown Cards
+            els.summaryBreakdownList.innerHTML = '';
+            gameState.history.forEach((item, idx) => {
+                const card = document.createElement('div');
+                card.className = 'p-4 rounded-2xl bg-slate-950/75 border border-slate-800/90 flex flex-col gap-2';
+                card.innerHTML = `
+                    <div class="flex items-start justify-between gap-3">
+                        <div>
+                            <div class="flex items-center gap-2 text-xs text-slate-400">
+                                <span class="font-bold text-cyan-400">#${idx + 1}</span>
+                                <span>•</span>
+                                <span>${escapeHtml(item.category)}</span>
+                            </div>
+                            <div class="text-xs sm:text-sm text-slate-300 mt-0.5">${escapeHtml(item.prompt)}</div>
+                        </div>
+                        <div class="shrink-0 text-right">
+                            <span class="inline-block px-2.5 py-1 rounded-xl font-display font-extrabold text-sm ${getTierBadgeClasses(item.score)}">
+                                +${item.meters}m
+                            </span>
+                        </div>
+                    </div>
+                    <div class="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-slate-800/70">
+                        <div class="font-display font-bold text-white text-sm sm:text-base">
+                            ${escapeHtml(item.answer)}
+                        </div>
+                        <span class="text-xs font-semibold text-slate-300">
+                            ${getTierEmoji(item.score)} ${escapeHtml(item.tier)} (${item.score} pts)
+                        </span>
+                    </div>
+                    <p class="text-xs text-slate-400 leading-relaxed">
+                        ${escapeHtml(item.commentary)}
+                    </p>
+                `;
+                els.summaryBreakdownList.appendChild(card);
+            });
+        }
+
+        function shareDiveResult() {
+            const totalDepth = gameState.totalPoints * 10;
+            const emojiBar = gameState.history.map(h => {
+                if (h.score >= 95) return '🦐';
+                if (h.score >= 81) return '🟣';
+                if (h.score >= 61) return '🔵';
+                if (h.score >= 36) return '🟢';
+                if (h.score > 0) return '🟡';
+                return '🔴';
+            }).join('');
+
+            const shareText = `🦐 KRILLION — Deep-Sea Rarity Trivia\n🌊 Depth: ${totalDepth.toLocaleString()}m / 7,000m (${gameState.totalPoints} pts)\n${emojiBar}\nRank: ${els.summaryRankBadge.textContent}`;
+
+            // Use reliable execCommand fallback for iframe compatibility
+            const textarea = document.createElement('textarea');
+            textarea.value = shareText;
+            textarea.style.position = 'fixed';
+            textarea.style.opacity = '0';
+            document.body.appendChild(textarea);
+            textarea.select();
+            try {
+                document.execCommand('copy');
+                els.shareBtnText.textContent = 'Copied to Clipboard!';
+                setTimeout(() => {
+                    els.shareBtnText.textContent = 'Share Dive Log';
+                }, 2500);
+            } catch (err) {
+                showToast('Could not copy automatically. Select and copy manually.');
+            }
+            document.body.removeChild(textarea);
+        }
+
+        // =========================================================================
+        // 8. HELPER FUNCTIONS & EVENT LISTENERS
+        // =========================================================================
+        function getTierFromScore(score) {
+            if (score <= 0) return 'Surface Drift';
+            if (score <= 15) return 'Plankton';
+            if (score <= 35) return 'Schooling Fish';
+            if (score <= 60) return 'Reef Dweller';
+            if (score <= 80) return 'Deep Diver';
+            if (score <= 94) return 'Abyssal';
+            return 'One in a Krillion';
+        }
+
+        function getTierEmoji(score) {
+            if (score <= 0) return '💨';
+            if (score <= 15) return '🦠';
+            if (score <= 35) return '🐟';
+            if (score <= 60) return '🐠';
+            if (score <= 80) return '🐙';
+            if (score <= 94) return '🦑';
+            return '🦐';
+        }
+
+        function getTierBadgeClasses(score) {
+            if (score <= 0) return 'bg-rose-950/80 text-rose-300 border-rose-500/40';
+            if (score <= 15) return 'bg-slate-800 text-slate-300 border-slate-600';
+            if (score <= 35) return 'bg-amber-950/70 text-amber-300 border-amber-500/40';
+            if (score <= 60) return 'bg-emerald-950/70 text-emerald-300 border-emerald-500/40';
+            if (score <= 80) return 'bg-cyan-950/80 text-cyan-300 border-cyan-400/40';
+            if (score <= 94) return 'bg-indigo-950/80 text-indigo-300 border-indigo-400/40';
+            return 'bg-fuchsia-950/90 text-fuchsia-200 border-fuchsia-400/60 shadow-sm shadow-fuchsia-500/30';
+        }
+
+        function escapeHtml(str) {
+            const div = document.createElement('div');
+            div.textContent = str || '';
+            return div.innerHTML;
+        }
+
+        function attachEventListeners() {
+            // Setup Form Submit
+            els.setupForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                startNewDive(false);
+            });
+
+            // Model Selector & Custom Model Input
+            els.modelSelect.addEventListener('change', () => {
+                toggleCustomModelVisibility();
+                hideSetupStatus();
+            });
+
+            // Test Connection & Error Action Buttons
+            els.btnTestConnection.addEventListener('click', testGeminiConnection);
+            els.btnRetryDive.addEventListener('click', () => startNewDive(false));
+            els.btnFallbackOfflineDeck.addEventListener('click', () => startNewDive(true));
+
+            // Toggle API Key Visibility
+            els.toggleKeyVisibility.addEventListener('click', () => {
+                const isPwd = els.apiKeyInput.type === 'password';
+                els.apiKeyInput.type = isPwd ? 'text' : 'password';
+                els.toggleKeyVisibility.textContent = isPwd ? 'Hide' : 'Show';
+            });
+
+            // Clear Stored API Key
+            els.clearKeyBtn.addEventListener('click', () => {
+                try {
+                    localStorage.removeItem(STORAGE_KEY_API);
+                } catch (_) {}
+                gameState.apiKey = '';
+                els.apiKeyInput.value = '';
+                els.savedKeyIndicator.classList.add('hidden');
+                els.clearKeyBtn.classList.add('hidden');
+                showToast('Saved API key cleared from browser storage.', 'success');
+            });
+
+            // Header API Key Settings Button -> Return to Setup Screen
+            els.btnApiSettings.addEventListener('click', () => {
+                clearInterval(gameState.timerInterval);
+                els.screenGame.classList.add('hidden');
+                els.screenSummary.classList.add('hidden');
+                els.screenSetup.classList.remove('hidden');
+                updateOceanAtmosphere(0);
+            });
+
+            // Gameplay Answer Submit
+            els.answerForm.addEventListener('submit', handleAnswerSubmit);
+
+            // Next Prompt Button
+            els.btnNextPrompt.addEventListener('click', advanceToNextStep);
+
+            // Summary Screen Actions
+            els.btnShareResult.addEventListener('click', shareDiveResult);
+            els.btnNewDive.addEventListener('click', () => {
+                els.screenSummary.classList.add('hidden');
+                els.screenSetup.classList.remove('hidden');
+                updateOceanAtmosphere(0);
+            });
+        }
+
+        // Boot application
+        window.addEventListener('DOMContentLoaded', initApp);
+    </script>
+</body>
+</html>
